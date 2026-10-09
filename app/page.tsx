@@ -4,20 +4,15 @@ import { useEffect, useState } from "react";
 
 import { HistoryDrawer } from "@/components/HistoryDrawer";
 import { ScorePanel } from "@/components/ScorePanel";
+import { ScoreSkeleton } from "@/components/ScoreSkeleton";
+import { SettingsDialog } from "@/components/SettingsDialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatRequestError, requestCoachReply } from "@/lib/evaluate";
 import { MOCK_EVALUATIONS } from "@/lib/mock-evaluations";
-import { readEvaluations, writeEvaluations } from "@/lib/storage";
+import { parseCoachResponse } from "@/lib/parseCoachResponse";
+import { readEvaluations, readSettings, writeEvaluations } from "@/lib/storage";
 import type { Evaluation } from "@/lib/types";
 
 function latestEvaluation(items: Evaluation[]): Evaluation | undefined {
@@ -26,9 +21,13 @@ function latestEvaluation(items: Evaluation[]): Evaluation | undefined {
 
 export default function HomePage() {
   const [promptText, setPromptText] = useState("");
+  const [taskContext, setTaskContext] = useState("");
   const [contextOpen, setContextOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [scoring, setScoring] = useState(false);
+  const [scoreError, setScoreError] = useState("");
+  const [rawResponse, setRawResponse] = useState("");
   const [history, setHistory] = useState<Evaluation[]>(MOCK_EVALUATIONS);
   const [selectedId, setSelectedId] = useState<string | null>(
     latestEvaluation(MOCK_EVALUATIONS)?.id ?? null
@@ -48,6 +47,7 @@ export default function HomePage() {
 
   function handleSelect(id: string) {
     setSelectedId(id);
+    setRawResponse("");
     setHistoryOpen(false);
   }
 
@@ -64,6 +64,57 @@ export default function HomePage() {
     writeEvaluations([]);
     setHistory([]);
     setSelectedId(null);
+  }
+
+  async function handleScore() {
+    const prompt = promptText.trim();
+    if (!prompt || scoring) {
+      return;
+    }
+    const settings = readSettings();
+    if (!settings.apiKey.trim()) {
+      setScoreError("请先在设置中填写 API Key");
+      setSettingsOpen(true);
+      return;
+    }
+    if (!settings.baseURL.trim() || !settings.model.trim()) {
+      setScoreError("请先在设置中填写 baseURL 和 model");
+      setSettingsOpen(true);
+      return;
+    }
+
+    setScoring(true);
+    setScoreError("");
+    setRawResponse("");
+    try {
+      const raw = await requestCoachReply(settings, prompt, taskContext);
+      const parsed = parseCoachResponse(raw);
+      if (!parsed.ok) {
+        if (parsed.kind === "json") {
+          setScoreError("评分结果无法解析，请重试");
+          setRawResponse(parsed.raw);
+        } else {
+          setScoreError("评分结果字段不完整，请重试");
+        }
+        return;
+      }
+      const context = taskContext.trim();
+      const evaluation: Evaluation = {
+        id: crypto.randomUUID(),
+        createdAt: Date.now(),
+        promptText: prompt,
+        ...(context ? { taskContext: context } : {}),
+        ...parsed.data,
+      };
+      const next = [evaluation, ...history];
+      writeEvaluations(next);
+      setHistory(next);
+      setSelectedId(evaluation.id);
+    } catch (error) {
+      setScoreError(formatRequestError(error));
+    } finally {
+      setScoring(false);
+    }
   }
 
   return (
@@ -99,6 +150,12 @@ export default function HomePage() {
                 id="prompt"
                 value={promptText}
                 onChange={(event) => setPromptText(event.target.value)}
+                onKeyDown={(event) => {
+                  if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                    event.preventDefault();
+                    void handleScore();
+                  }
+                }}
                 placeholder="写下要评分的提示词"
                 rows={10}
                 className="min-h-56 resize-y font-sans"
@@ -118,6 +175,8 @@ export default function HomePage() {
               {contextOpen ? (
                 <Textarea
                   id="task-context"
+                  value={taskContext}
+                  onChange={(event) => setTaskContext(event.target.value)}
                   placeholder="补充任务背景，帮助判断提示词是否够用"
                   rows={4}
                   className="resize-y"
@@ -125,14 +184,24 @@ export default function HomePage() {
               ) : null}
             </div>
 
-            <Button type="button" disabled={!canScore}>
-              开始评分
+            <Button type="button" disabled={!canScore || scoring} onClick={() => void handleScore()}>
+              {scoring ? "评分中" : "开始评分"}
             </Button>
+            {scoreError ? <p className="text-sm text-destructive">{scoreError}</p> : null}
           </div>
         </section>
 
         <section className="flex w-3/5 min-w-0 flex-col">
-          {selected ? (
+          {scoring ? (
+            <ScoreSkeleton />
+          ) : rawResponse ? (
+            <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-6 py-5">
+              <h2 className="text-sm font-medium">模型原文</h2>
+              <pre className="whitespace-pre-wrap rounded-md border bg-muted/40 p-3 font-mono text-sm leading-6">
+                {rawResponse}
+              </pre>
+            </div>
+          ) : selected ? (
             <ScorePanel evaluation={selected} />
           ) : (
             <div className="flex flex-1 items-center justify-center p-8">
@@ -147,36 +216,7 @@ export default function HomePage() {
         </section>
       </div>
 
-      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>API 配置</DialogTitle>
-            <DialogDescription>
-              填写 OpenAI 兼容接口。此步骤只展示表单，不会保存或发起请求。
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="base-url">baseURL</Label>
-              <Input id="base-url" placeholder="https://api.openai.com/v1" />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="api-key">apiKey</Label>
-              <Input id="api-key" type="password" placeholder="sk-..." />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="model">model</Label>
-              <Input id="model" placeholder="gpt-4o-mini" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline">
-              测试连接
-            </Button>
-            <Button type="button">保存</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
 
       <HistoryDrawer
         open={historyOpen}
