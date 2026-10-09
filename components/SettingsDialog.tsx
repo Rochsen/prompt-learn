@@ -99,7 +99,7 @@ function ModelField({ value, dialogOpen, onChange }: ModelFieldProps) {
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [baseURL, setBaseURL] = useState(DEFAULT_BASE_URL);
   const [apiKey, setApiKey] = useState("");
-  const [model, setModel] = useState(DEFAULT_MODEL);
+  const [model, setModel] = useState<string>(DEFAULT_MODEL);
   const [testing, setTesting] = useState(false);
   const [message, setMessage] = useState("");
   const [messageIsError, setMessageIsError] = useState(false);

@@ -90,12 +90,10 @@ export default function HomePage() {
       const raw = await requestCoachReply(settings, prompt, taskContext);
       const parsed = parseCoachResponse(raw);
       if (!parsed.ok) {
-        if (parsed.kind === "json") {
-          setScoreError("评分结果无法解析，请重试");
-          setRawResponse(parsed.raw);
-        } else {
-          setScoreError("评分结果字段不完整，请重试");
-        }
+        setScoreError(
+          parsed.kind === "json" ? "评分结果无法解析，请重试" : "评分结果字段不完整，请重试"
+        );
+        setRawResponse(parsed.raw);
         return;
       }
       const context = taskContext.trim();
