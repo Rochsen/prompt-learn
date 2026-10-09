@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +26,75 @@ type SettingsDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
+
+type ModelFieldProps = {
+  value: string;
+  dialogOpen: boolean;
+  onChange: (value: string) => void;
+};
+
+function ModelField({ value, dialogOpen, onChange }: ModelFieldProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const keyword = value.trim().toLowerCase();
+  const options = MODEL_OPTIONS.filter((option) => option.toLowerCase().includes(keyword));
+
+  useEffect(() => {
+    if (!dialogOpen) {
+      setMenuOpen(false);
+    }
+  }, [dialogOpen]);
+
+  useEffect(() => {
+    function handlePointerDown(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, []);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <Input
+        id="model"
+        value={value}
+        placeholder={DEFAULT_MODEL}
+        autoComplete="off"
+        onFocus={() => setMenuOpen(true)}
+        onChange={(event) => {
+          onChange(event.target.value);
+          setMenuOpen(true);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            setMenuOpen(false);
+          }
+        }}
+      />
+      {menuOpen && options.length > 0 ? (
+        <ul className="absolute left-0 top-full z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-md border bg-popover p-1 shadow-md">
+          {options.map((option) => (
+            <li key={option}>
+              <button
+                type="button"
+                className="w-full rounded-sm px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  onChange(option);
+                  setMenuOpen(false);
+                }}
+              >
+                {option}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [baseURL, setBaseURL] = useState(DEFAULT_BASE_URL);
@@ -106,18 +175,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           </div>
           <div className="grid gap-2">
             <Label htmlFor="model">model</Label>
-            <Input
-              id="model"
-              list="model-options"
-              value={model}
-              placeholder={DEFAULT_MODEL}
-              onChange={(event) => setModel(event.target.value)}
-            />
-            <datalist id="model-options">
-              {MODEL_OPTIONS.map((option) => (
-                <option key={option} value={option} />
-              ))}
-            </datalist>
+            <ModelField value={model} dialogOpen={open} onChange={setModel} />
           </div>
         </div>
         {message ? (
