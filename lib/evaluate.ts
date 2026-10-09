@@ -2,6 +2,7 @@ import { PROMPT_COACH_SYSTEM_PROMPT } from "@/lib/promptCoach";
 import type { ApiSettings } from "@/lib/storage";
 
 const REQUEST_TIMEOUT_MS = 60_000;
+const MAX_OUTPUT_TOKENS = 4096;
 
 function isTimeoutError(error: unknown): boolean {
   return (
@@ -25,6 +26,14 @@ export function formatRequestError(error: unknown): string {
 
 function normalizeBaseURL(baseURL: string): string {
   return baseURL.trim().replace(/\/+$/, "");
+}
+
+function isDeepSeek(baseURL: string): boolean {
+  try {
+    return new URL(baseURL).hostname === "api.deepseek.com";
+  } catch {
+    return baseURL.includes("api.deepseek.com");
+  }
 }
 
 function buildUserMessage(promptText: string, taskContext: string): string {
@@ -64,20 +73,26 @@ export async function requestCoachReply(
   taskContext: string
 ): Promise<string> {
   const baseURL = normalizeBaseURL(settings.baseURL);
+  const payload: Record<string, unknown> = {
+    model: settings.model.trim(),
+    messages: [
+      { role: "system", content: PROMPT_COACH_SYSTEM_PROMPT },
+      { role: "user", content: buildUserMessage(promptText, taskContext) },
+    ],
+    response_format: { type: "json_object" },
+    max_tokens: MAX_OUTPUT_TOKENS,
+  };
+  // DeepSeek 默认先输出思考过程，评分只需要最终 JSON。
+  if (isDeepSeek(baseURL)) {
+    payload.thinking = { type: "disabled" };
+  }
   const response = await fetch(`${baseURL}/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${settings.apiKey.trim()}`,
     },
-    body: JSON.stringify({
-      model: settings.model.trim(),
-      messages: [
-        { role: "system", content: PROMPT_COACH_SYSTEM_PROMPT },
-        { role: "user", content: buildUserMessage(promptText, taskContext) },
-      ],
-      response_format: { type: "json_object" },
-    }),
+    body: JSON.stringify(payload),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 
