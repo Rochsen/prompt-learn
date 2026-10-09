@@ -3,7 +3,7 @@ import type { Evaluation } from "@/lib/types";
 const HISTORY_KEY = "prompt-gym:history";
 const SETTINGS_KEY = "prompt-gym:settings";
 
-export const DEFAULT_BASE_URL = "https://api.openai.com/v1";
+export const DEFAULT_BASE_URL = "https://api.deepseek.com";
 
 export const MODEL_OPTIONS = [
   "deepseek-flash",
