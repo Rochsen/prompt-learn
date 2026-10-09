@@ -3,24 +3,40 @@ import type { Evaluation } from "@/lib/types";
 const HISTORY_KEY = "prompt-gym:history";
 const SETTINGS_KEY = "prompt-gym:settings";
 
+export const DEFAULT_BASE_URL = "https://api.openai.com/v1";
+
+export const MODEL_OPTIONS = [
+  "deepseek-flash",
+  "deepseek-chat",
+  "qwen3.8-flash",
+  "qwen-plus",
+  "qwen-turbo",
+  "glm-4-flash",
+  "moonshot-v1-8k",
+] as const;
+
+export const DEFAULT_MODEL = MODEL_OPTIONS[0];
+
 export type ApiSettings = {
   baseURL: string;
   apiKey: string;
   model: string;
 };
 
-const EMPTY_SETTINGS: ApiSettings = {
-  baseURL: "",
-  apiKey: "",
-  model: "",
-};
+function withDefaults(settings: Partial<ApiSettings>): ApiSettings {
+  return {
+    baseURL: settings.baseURL?.trim() || DEFAULT_BASE_URL,
+    apiKey: settings.apiKey ?? "",
+    model: settings.model?.trim() || DEFAULT_MODEL,
+  };
+}
 
 export function readSettings(): ApiSettings {
   const raw = localStorage.getItem(SETTINGS_KEY);
   if (raw === null) {
-    return EMPTY_SETTINGS;
+    return withDefaults({});
   }
-  return JSON.parse(raw) as ApiSettings;
+  return withDefaults(JSON.parse(raw) as ApiSettings);
 }
 
 export function writeSettings(settings: ApiSettings): void {

@@ -14,7 +14,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatRequestError, testConnection } from "@/lib/evaluate";
-import { readSettings, writeSettings } from "@/lib/storage";
+import {
+  DEFAULT_BASE_URL,
+  DEFAULT_MODEL,
+  MODEL_OPTIONS,
+  readSettings,
+  writeSettings,
+} from "@/lib/storage";
 
 type SettingsDialogProps = {
   open: boolean;
@@ -22,9 +28,9 @@ type SettingsDialogProps = {
 };
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-  const [baseURL, setBaseURL] = useState("");
+  const [baseURL, setBaseURL] = useState(DEFAULT_BASE_URL);
   const [apiKey, setApiKey] = useState("");
-  const [model, setModel] = useState("");
+  const [model, setModel] = useState(DEFAULT_MODEL);
   const [testing, setTesting] = useState(false);
   const [message, setMessage] = useState("");
   const [messageIsError, setMessageIsError] = useState(false);
@@ -84,7 +90,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             <Input
               id="base-url"
               value={baseURL}
-              placeholder="https://api.openai.com/v1"
+              placeholder={DEFAULT_BASE_URL}
               onChange={(event) => setBaseURL(event.target.value)}
             />
           </div>
@@ -102,10 +108,16 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             <Label htmlFor="model">model</Label>
             <Input
               id="model"
+              list="model-options"
               value={model}
-              placeholder="gpt-4o-mini"
+              placeholder={DEFAULT_MODEL}
               onChange={(event) => setModel(event.target.value)}
             />
+            <datalist id="model-options">
+              {MODEL_OPTIONS.map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
           </div>
         </div>
         {message ? (
