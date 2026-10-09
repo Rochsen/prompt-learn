@@ -1,0 +1,6 @@
+1. 用 TypeScript strict，不要 any
+2. 组件用 组合式 API
+3. 样式只用 Tailwind
+4. 每完成一次任务，就用git commit小步提交一次
+5. 遇到问题，先自己思考，再上网搜索，再请教同事
+6. 每次提交的 commit message 要简洁明了，不要过于复杂
