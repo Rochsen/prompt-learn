@@ -3,14 +3,18 @@ import type { ApiSettings } from "@/lib/storage";
 
 const REQUEST_TIMEOUT_MS = 60_000;
 
-export function formatRequestError(error: unknown): string {
-  if (
-    error instanceof DOMException &&
+function isTimeoutError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
     (error.name === "TimeoutError" || error.name === "AbortError")
-  ) {
+  );
+}
+
+export function formatRequestError(error: unknown): string {
+  if (isTimeoutError(error)) {
     return "请求超时，请稍后重试";
   }
-  if (error instanceof TypeError) {
+  if (error instanceof TypeError || error instanceof DOMException) {
     return "网络请求失败，请检查 baseURL 或网络";
   }
   if (error instanceof Error && error.message) {
@@ -81,9 +85,15 @@ export async function requestCoachReply(
     throw new Error(await readErrorDetail(response));
   }
 
-  const body = (await response.json()) as {
-    choices?: { message?: { content?: string | null } }[];
-  };
+  let body: { choices?: { message?: { content?: string | null } }[] };
+  try {
+    body = (await response.json()) as typeof body;
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      throw error;
+    }
+    throw new Error("接口返回的内容无法读取");
+  }
   const content = body.choices?.[0]?.message?.content;
   if (typeof content !== "string" || content.length === 0) {
     throw new Error("接口没有返回评分内容");
