@@ -6,6 +6,7 @@ import { HistoryDrawer } from "@/components/HistoryDrawer";
 import { ScorePanel } from "@/components/ScorePanel";
 import { ScoreSkeleton } from "@/components/ScoreSkeleton";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { TaskContextField } from "@/components/TaskContextField";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -160,27 +161,12 @@ export default function HomePage() {
               />
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="w-fit px-2 text-muted-foreground"
-                onClick={() => setContextOpen((open) => !open)}
-              >
-                {contextOpen ? "收起任务背景" : "任务背景（可选）"}
-              </Button>
-              {contextOpen ? (
-                <Textarea
-                  id="task-context"
-                  value={taskContext}
-                  onChange={(event) => setTaskContext(event.target.value)}
-                  placeholder="补充任务背景，帮助判断提示词是否够用"
-                  rows={4}
-                  className="resize-y"
-                />
-              ) : null}
-            </div>
+            <TaskContextField
+              open={contextOpen}
+              value={taskContext}
+              onOpenChange={setContextOpen}
+              onChange={setTaskContext}
+            />
 
             <Button type="button" disabled={!canScore || scoring} onClick={() => void handleScore()}>
               {scoring ? "评分中" : "开始评分"}
