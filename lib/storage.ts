@@ -3,8 +3,6 @@ import type { Evaluation } from "@/lib/types";
 const HISTORY_KEY = "prompt-gym:history";
 const SETTINGS_KEY = "prompt-gym:settings";
 
-export const DEFAULT_BASE_URL = "https://api.deepseek.com";
-
 export const MODEL_OPTIONS = [
   "deepseek-flash",
   "deepseek-chat",
@@ -15,28 +13,31 @@ export const MODEL_OPTIONS = [
   "moonshot-v1-8k",
 ] as const;
 
-export const DEFAULT_MODEL = MODEL_OPTIONS[0];
-
 export type ApiSettings = {
   baseURL: string;
   apiKey: string;
   model: string;
 };
 
-function withDefaults(settings: Partial<ApiSettings>): ApiSettings {
+function emptySettings(): ApiSettings {
   return {
-    baseURL: settings.baseURL?.trim() || DEFAULT_BASE_URL,
-    apiKey: settings.apiKey ?? "",
-    model: settings.model?.trim() || DEFAULT_MODEL,
+    baseURL: "",
+    apiKey: "",
+    model: "",
   };
 }
 
 export function readSettings(): ApiSettings {
   const raw = localStorage.getItem(SETTINGS_KEY);
   if (raw === null) {
-    return withDefaults({});
+    return emptySettings();
   }
-  return withDefaults(JSON.parse(raw) as ApiSettings);
+  const parsed = JSON.parse(raw) as Partial<ApiSettings>;
+  return {
+    baseURL: parsed.baseURL ?? "",
+    apiKey: parsed.apiKey ?? "",
+    model: parsed.model ?? "",
+  };
 }
 
 export function writeSettings(settings: ApiSettings): void {

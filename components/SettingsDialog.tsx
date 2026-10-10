@@ -15,13 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatRequestError, testConnection } from "@/lib/evaluate";
 import { parseEnvConfig } from "@/lib/parse-env";
-import {
-  DEFAULT_BASE_URL,
-  DEFAULT_MODEL,
-  MODEL_OPTIONS,
-  readSettings,
-  writeSettings,
-} from "@/lib/storage";
+import { MODEL_OPTIONS, readSettings, writeSettings } from "@/lib/storage";
 
 type SettingsDialogProps = {
   open: boolean;
@@ -61,7 +55,7 @@ function ModelField({ value, dialogOpen, onChange }: ModelFieldProps) {
       <Input
         id="model"
         value={value}
-        placeholder={DEFAULT_MODEL}
+        placeholder="选择或输入模型名"
         autoComplete="off"
         onFocus={() => setMenuOpen(true)}
         onChange={(event) => {
@@ -98,9 +92,9 @@ function ModelField({ value, dialogOpen, onChange }: ModelFieldProps) {
 }
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-  const [baseURL, setBaseURL] = useState(DEFAULT_BASE_URL);
+  const [baseURL, setBaseURL] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [model, setModel] = useState<string>(DEFAULT_MODEL);
+  const [model, setModel] = useState("");
   const [testing, setTesting] = useState(false);
   const [message, setMessage] = useState("");
   const [messageIsError, setMessageIsError] = useState(false);
@@ -190,7 +184,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             <Input
               id="base-url"
               value={baseURL}
-              placeholder={DEFAULT_BASE_URL}
+              placeholder="https://api.example.com"
               onChange={(event) => setBaseURL(event.target.value)}
             />
           </div>
