@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatRequestError, testConnection } from "@/lib/evaluate";
+import { parseEnvConfig } from "@/lib/parse-env";
 import {
   DEFAULT_BASE_URL,
   DEFAULT_MODEL,
@@ -103,6 +104,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [testing, setTesting] = useState(false);
   const [message, setMessage] = useState("");
   const [messageIsError, setMessageIsError] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) {
@@ -123,6 +125,35 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       model: model.trim(),
     });
     setMessage("已保存");
+    setMessageIsError(false);
+  }
+
+  async function handleImport(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) {
+      return;
+    }
+    const config = parseEnvConfig(await file.text());
+    if (!config.baseURL && !config.apiKey && !config.model) {
+      setMessage("配置文件里没有 BASE_URL、API_KEY 或 MODEL");
+      setMessageIsError(true);
+      return;
+    }
+    const next = {
+      baseURL: config.baseURL ?? baseURL,
+      apiKey: config.apiKey ?? apiKey,
+      model: config.model ?? model,
+    };
+    setBaseURL(next.baseURL);
+    setApiKey(next.apiKey);
+    setModel(next.model);
+    writeSettings({
+      baseURL: next.baseURL.trim(),
+      apiKey: next.apiKey.trim(),
+      model: next.model.trim(),
+    });
+    setMessage("已从配置文件导入");
     setMessageIsError(false);
   }
 
@@ -184,6 +215,16 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           </p>
         ) : null}
         <DialogFooter>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".env,text/plain"
+            className="hidden"
+            onChange={(event) => void handleImport(event)}
+          />
+          <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+            导入 .env
+          </Button>
           <Button type="button" variant="outline" disabled={testing} onClick={handleTest}>
             {testing ? "测试中" : "测试连接"}
           </Button>

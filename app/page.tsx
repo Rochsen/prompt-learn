@@ -7,6 +7,7 @@ import { ScorePanel } from "@/components/ScorePanel";
 import { ScoreSkeleton } from "@/components/ScoreSkeleton";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { TaskContextField } from "@/components/TaskContextField";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -119,8 +120,9 @@ export default function HomePage() {
   return (
     <div className="flex h-screen flex-col">
       <header className="flex h-12 shrink-0 items-center justify-between border-b px-4">
-        <span className="text-sm font-semibold tracking-tight">Prompt Gym</span>
+        <span className="text-sm font-semibold tracking-tight">提示词打分系统</span>
         <div className="flex items-center gap-1">
+          <ThemeToggle />
           <Button
             type="button"
             variant="ghost"
